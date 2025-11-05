@@ -407,7 +407,71 @@ def main():
     logger.info("Sentiment analysis has limitations - see warnings above.")
     logger.info("Always conduct thorough research before investment decisions.")
     logger.info("Past performance does not guarantee future results.\n")
+# ADD THIS TO THE END OF YOUR EXISTING main.py
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import os
+
+app = Flask(__name__)
+CORS(app)  # Allow web requests from your frontend
+
+@app.route('/', methods=['GET'])
+def home():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'running',
+        'message': 'Sentiment Analysis API is live!',
+        'version': '1.0'
+    })
+
+@app.route('/api/analyze', methods=['POST', 'GET'])
+def analyze_endpoint():
+    """
+    Main endpoint to analyze a ticker
+    Usage: POST /api/analyze with {"ticker": "AAPL"}
+    """
+    # Get ticker from request
+    if request.method == 'GET':
+        ticker = request.args.get('ticker', '').upper()
+    else:
+        data = request.get_json() or {}
+        ticker = data.get('ticker', '').upper()
+    
+    if not ticker:
+        return jsonify({
+            'error': 'Ticker symbol required',
+            'usage': 'POST /api/analyze with {"ticker": "AAPL"}'
+        }), 400
+    
+    try:
+        logger.info(f"Starting analysis for {ticker}...")
+        
+        # Call your existing analyze_ticker function
+        result = analyze_ticker(ticker)
+        
+        return jsonify({
+            'success': True,
+            'ticker': ticker,
+            'data': result
+        })
+        
+    except Exception as e:
+        logger.error(f"Analysis failed for {ticker}: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'ticker': ticker
+        }), 500
+
+if __name__ == '__main__':
+    # Get port from environment (Render sets this automatically)
+    port = int(os.environ.get('PORT', 10000))
+    
+    # Run Flask app
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 
 if __name__ == "__main__":
+
     main()
