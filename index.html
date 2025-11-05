@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Sentiment Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 40px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .result-card {
+            background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .ticker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .ticker-name {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .company-name {
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        .sentiment-badge {
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .super-positive { background: #48bb78; color: white; }
+        .positive { background: #68d391; color: white; }
+        .neutral { background: #cbd5e0; color: #2d3748; }
+        .negative { background: #fc8181; color: white; }
+        .super-negative { background: #f56565; color: white; }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .metric {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-label {
+            color: #718096;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            color: #2d3748;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+        
+        .positive-value { color: #48bb78; }
+        .negative-value { color: #f56565; }
+        
+        .error {
+            display: none;
+            background: #fed7d7;
+            border-left: 4px solid #f56565;
+            padding: 20px;
+            border-radius: 10px;
+            color: #742a2a;
+            margin-bottom: 20px;
+        }
+        
+        .examples {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        
+        .examples h3 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        
+        .example-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .chip {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .chip:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Stock Sentiment Analyzer</h1>
+        <p class="subtitle">AI-powered sentiment analysis from news and social media</p>
+        
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="tickerInput" 
+                placeholder="Enter stock ticker (e.g., AAPL, TSLA, MSFT)" 
+                onkeypress="if(event.key==='Enter') analyzeTicker()"
+            >
+            <button onclick="analyzeTicker()" id="analyzeBtn">Analyze</button>
+        </div>
+        
+        <div class="error" id="errorBox"></div>
+        
+        <div class="loading" id="loadingBox">
+            <div class="spinner"></div>
+            <p>Analyzing sentiment... This may take 5-10 minutes</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Fetching news, social data, and running AI models...</p>
+        </div>
+        
+        <div class="results" id="resultsBox"></div>
+        
+        <div class="examples">
+            <h3>Popular Stocks</h3>
+            <div class="example-chips">
+                <span class="chip" onclick="quickAnalyze('AAPL')">🍎 AAPL</span>
+                <span class="chip" onclick="quickAnalyze('TSLA')">🚗 TSLA</span>
+                <span class="chip" onclick="quickAnalyze('MSFT')">💻 MSFT</span>
+                <span class="chip" onclick="quickAnalyze('GOOGL')">🔍 GOOGL</span>
+                <span class="chip" onclick="quickAnalyze('NVDA')">🎮 NVDA</span>
+                <span class="chip" onclick="quickAnalyze('META')">📘 META</span>
+            </div>
+            
+            <h3 style="margin-top: 20px;">International Stocks</h3>
+            <div class="example-chips">
+                <span class="chip" onclick="quickAnalyze('RELIANCE.NS')">🇮🇳 RELIANCE.NS</span>
+                <span class="chip" onclick="quickAnalyze('TCS.BO')">🇮🇳 TCS.BO</span>
+                <span class="chip" onclick="quickAnalyze('TSCO.L')">🇬🇧 TSCO.L</span>
+                <span class="chip" onclick="quickAnalyze('0700.HK')">🇭🇰 0700.HK</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function quickAnalyze(ticker) {
+            document.getElementById('tickerInput').value = ticker;
+            analyzeTicker();
+        }
+        
+        async function analyzeTicker() {
+            const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+            
+            if (!ticker) {
+                showError('Please enter a stock ticker');
+                return;
+            }
+            
+            // Hide previous results and errors
+            document.getElementById('resultsBox').style.display = 'none';
+            document.getElementById('errorBox').style.display = 'none';
+            
+            // Show loading
+            document.getElementById('loadingBox').style.display = 'block';
+            document.getElementById('analyzeBtn').disabled = true;
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ ticker: ticker })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+                
+                displayResults(data.data);
+                
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loadingBox').style.display = 'none';
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        }
+        
+        function displayResults(data) {
+            const resultsBox = document.getElementById('resultsBox');
+            
+            const classification = data.final_classification || 'NEUTRAL';
+            const badgeClass = classification.toLowerCase().replace(' ', '-');
+            
+            const metrics = data.sentiment_metrics || {};
+            const avgSentiment = metrics.avg_sentiment || 0;
+            const totalReturn = metrics.total_return_pct || 0;
+            const correlation = metrics.price_sentiment_correlation || 0;
+            const confidence = data.confidence_score || 0;
+            
+            const returnClass = totalReturn > 0 ? 'positive-value' : 'negative-value';
+            
+            resultsBox.innerHTML = `
+                <div class="result-card">
+                    <div class="ticker-header">
+                        <div>
+                            <div class="ticker-name">${data.ticker}</div>
+                            <div class="company-name">${data.company_name || data.ticker}</div>
+                        </div>
+                        <div class="sentiment-badge ${badgeClass}">
+                            ${classification}
+                        </div>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-label">Confidence</div>
+                            <div class="metric-value">${confidence.toFixed(3)}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Avg Sentiment</div>
+                            <div class="metric-value">${avgSentiment > 0 ? '+' : ''}${avgSentiment.toFixed(3)}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Total Return</div>
+                            <div class="metric-value ${returnClass}">${totalReturn > 0 ? '+' : ''}${totalReturn.toFixed(1)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">Correlation</div>
+                            <div class="metric-value">${correlation > 0 ? '+' : ''}${correlation.toFixed(3)}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 10px; border-left: 4px solid #ffc107;">
+                        <div style="font-weight: bold; color: #856404; margin-bottom: 5px;">
+                            Reliability: ${data.reliability_assessment || 'Unknown'}
+                        </div>
+                        <div style="font-size: 0.9em; color: #856404;">
+                            Analysis period: ${data.lookback_years} years
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            resultsBox.style.display = 'block';
+        }
+        
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
