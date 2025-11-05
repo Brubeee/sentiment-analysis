@@ -1,0 +1,21 @@
+# Core Dependencies
+python-dotenv==1.0.0
+pandas==2.1.4
+numpy==1.26.2
+
+# Data Fetching
+yfinance==0.2.33
+praw==7.7.1
+requests==2.31.0
+
+# Machine Learning & NLP
+torch==2.1.2
+transformers==4.36.2
+scipy==1.11.4
+
+# Utilities
+tqdm==4.66.1
+
+# Optional: For GPU support (if you have NVIDIA GPU)
+# Uncomment the line below if you want GPU acceleration
+# torch==2.1.2+cu118 -f https://download.pytorch.org/whl/torch_stable.html
